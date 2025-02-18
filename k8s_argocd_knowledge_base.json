@@ -1,0 +1,47 @@
+{
+  "k8s_basics": {
+    "embeddings": [],
+    "questions": [
+      "What are the basic components of Kubernetes?",
+      "Explain Kubernetes architecture",
+      "K8s core concepts"
+    ],
+    "response": "Key Kubernetes Components:\n\n1. Control Plane:\n- API Server: Central management point\n- etcd: Distributed key-value store\n- Scheduler: Assigns pods to nodes\n- Controller Manager: Maintains cluster state\n\n2. Worker Nodes:\n- kubelet: Node agent\n- kube-proxy: Network proxy\n- Container Runtime: Docker/containerd\n\n3. Basic Objects:\n- Pods: Smallest deployable units\n- Services: Network abstraction\n- Volumes: Storage abstraction\n- Namespaces: Resource isolation"
+  },
+  "argocd_basics": {
+    "embeddings": [],
+    "questions": [
+      "What is ArgoCD?",
+      "Explain ArgoCD architecture",
+      "How does ArgoCD work?"
+    ],
+    "response": "ArgoCD Overview:\n\n1. Core Concepts:\n- GitOps tool for Kubernetes\n- Declarative continuous delivery\n- Git as single source of truth\n\n2. Architecture:\n- API Server: REST API/WebUI\n- Repository Server: Git repository interface\n- Application Controller: Kubernetes controller\n- Redis: Cache for application state\n\n3. Key Features:\n- Automated sync\n- Drift detection\n- Role-Based Access Control\n- SSO Integration\n- Webhook Integration"
+  },
+  "argocd_app_config": {
+    "embeddings": [],
+    "questions": [
+      "How to configure ArgoCD application?",
+      "ArgoCD application manifest example",
+      "Create ArgoCD application"
+    ],
+    "response": "ArgoCD Application Configuration:\n\napiVersion: argoproj.io/v1alpha1\nkind: Application\nmetadata:\n  name: myapp\n  namespace: argocd\nspec:\n  project: default\n  source:\n    repoURL: https://github.com/org/repo\n    targetRevision: HEAD\n    path: k8s\n  destination:\n    server: https://kubernetes.default.svc\n    namespace: myapp\n  syncPolicy:\n    automated:\n      prune: true\n      selfHeal: true\n    syncOptions:\n      - CreateNamespace=true"
+  },
+  "argocd_projects": {
+    "embeddings": [],
+    "questions": [
+      "How to create ArgoCD project?",
+      "ArgoCD project configuration",
+      "Project management in ArgoCD"
+    ],
+    "response": "ArgoCD Project Configuration:\n\napiVersion: argoproj.io/v1alpha1\nkind: AppProject\nmetadata:\n  name: my-project\n  namespace: argocd\nspec:\n  description: My Project\n  sourceRepos:\n    - '*'\n  destinations:\n    - namespace: '*'\n      server: https://kubernetes.default.svc\n  clusterResourceWhitelist:\n    - group: '*'\n      kind: '*'\n  namespaceResourceBlacklist:\n    - group: ''\n      kind: ResourceQuota\n  roles:\n    - name: project-admin\n      description: Project Admin\n      policies:\n        - p, proj:my-project:project-admin, applications, *, my-project/*, allow"
+  },
+  "argocd_rbac": {
+    "embeddings": [],
+    "questions": [
+      "How to configure RBAC in ArgoCD?",
+      "ArgoCD role-based access control",
+      "ArgoCD user permissions"
+    ],
+    "response": "ArgoCD RBAC Configuration:\n\n1. ConfigMap Configuration:\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: argocd-rbac-cm\ndata:\n  policy.csv: |\n    p, role:org-admin, applications, *, */*, allow\n    p, role:org-admin, clusters, get, *, allow\n    p, role:developer, applications, get, */*, allow\n    p, role:developer, applications, sync, */*, allow\n\n2. User Assignment:\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: argocd-cm\ndata:\n  accounts.developer: apiKey,login\n  accounts.org-admin: apiKey,login"
+  }
+}

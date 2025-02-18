@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>K8s & ArgoCD Expert System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.15.0/tf.min.js"></script>
+    <style>
+      /* ... Previous styles ... */
+      .toolbar {
+        margin: 20px 0;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        display: flex;
+        gap: 10px;
+      }
+      .export-btn {
+        background-color: #2196f3;
+      }
+      .export-btn:hover {
+        background-color: #1976d2;
+      }
+      .clear-btn {
+        background-color: #f44336;
+      }
+      .clear-btn:hover {
+        background-color: #d32f2f;
+      }
+      .status {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+      }
+      .status.success {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+      }
+      .status.error {
+        background-color: #ffebee;
+        color: #c62828;
+      }
+      .knowledge-browser {
+        margin-top: 30px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+      }
+      .knowledge-list {
+        margin-top: 10px;
+      }
+      .knowledge-item {
+        padding: 10px;
+        margin: 5px 0;
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .knowledge-item:hover {
+        background-color: #f5f5f5;
+      }
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .input-group {
+        background-color: white;
+        padding: 20px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
+        margin-bottom: 15px;
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>K8s & ArgoCD Expert System</h1>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <button onclick="exportKnowledge()" class="export-btn">
+          Export Knowledge Base
+        </button>
+        <button onclick="clearKnowledge()" class="clear-btn">
+          Clear Knowledge Base
+        </button>
+      </div>
+
+      <!-- Status Messages -->
+      <div id="status" style="display: none"></div>
+
+      <!-- Question Form -->
+      <div class="input-group">
+        <h2>Ask a Question</h2>
+        <input
+          type="text"
+          id="question"
+          placeholder="Ask a question about K8s and ArgoCD..."
+          class="w-full"
+        />
+        <button onclick="askQuestion()">Ask Question</button>
+      </div>
+
+      <!-- Answer Display -->
+      <div id="answer" class="answer" style="display: none"></div>
+
+      <!-- Learning Prompt -->
+      <div id="learningPrompt" class="learning-prompt" style="display: none">
+        <h3>I don't know the answer. Can you teach me?</h3>
+        <div class="input-group">
+          <textarea
+            id="teachingAnswer"
+            rows="4"
+            placeholder="Please provide the correct answer..."
+          ></textarea>
+          <div class="button-group">
+            <button onclick="learnNewAnswer()">Teach Me</button>
+            <button onclick="skipLearning()" class="skip-btn">Skip</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- New Knowledge Form -->
+      <div class="new-knowledge">
+        <h2>Add New Knowledge</h2>
+        <div class="input-group">
+          <input
+            type="text"
+            id="newQuestion"
+            placeholder="Enter a new question"
+          />
+          <textarea
+            id="newAnswer"
+            rows="4"
+            placeholder="Enter the detailed answer"
+          ></textarea>
+          <button onclick="addKnowledge()">Add Knowledge</button>
+        </div>
+      </div>
+
+      <!-- Knowledge Base Browser -->
+      <div class="knowledge-browser">
+        <h2>Browse Knowledge Base</h2>
+        <div id="knowledgeList" class="knowledge-list"></div>
+      </div>
+    </div>
+
+    <script>
+      // Default Knowledge Base with comprehensive K8s/ArgoCD knowledge
+      const defaultKnowledgeBase = {
+        k8s_basics: {
+          embeddings: [],
+          questions: [
+            "What are the basic components of Kubernetes?",
+            "Explain Kubernetes architecture",
+            "K8s core concepts",
+          ],
+          response: `Key Kubernetes Components:
+
+1. Control Plane:
+- API Server: Central management point
+- etcd: Distributed key-value store
+- Scheduler: Assigns pods to nodes
+- Controller Manager: Maintains cluster state
+
+2. Worker Nodes:
+- kubelet: Node agent
+- kube-proxy: Network proxy
+- Container Runtime: Docker/containerd
+
+3. Basic Objects:
+- Pods: Smallest deployable units
+- Services: Network abstraction
+- Volumes: Storage abstraction
+- Namespaces: Resource isolation`,
+        },
+        argocd_basics: {
+          embeddings: [],
+          questions: [
+            "What is ArgoCD?",
+            "Explain ArgoCD architecture",
+            "How does ArgoCD work?",
+          ],
+          response: `ArgoCD Overview:
+
+1. Core Concepts:
+- GitOps tool for Kubernetes
+- Declarative continuous delivery
+- Git as single source of truth
+
+2. Architecture:
+- API Server: REST API/WebUI
+- Repository Server: Git repository interface
+- Application Controller: Kubernetes controller
+- Redis: Cache for application state
+
+3. Key Features:
+- Automated sync
+- Drift detection
+- Role-Based Access Control
+- SSO Integration
+- Webhook Integration`,
+        },
+        argocd_app_config: {
+          embeddings: [],
+          questions: [
+            "How to configure ArgoCD application?",
+            "ArgoCD application manifest example",
+            "Create ArgoCD application",
+          ],
+          response: `ArgoCD Application Configuration:
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: myapp
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/org/repo
+    targetRevision: HEAD
+    path: k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: myapp
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true`,
+        },
+        argocd_projects: {
+          embeddings: [],
+          questions: [
+            "How to create ArgoCD project?",
+            "ArgoCD project configuration",
+            "Project management in ArgoCD",
+          ],
+          response: `ArgoCD Project Configuration:
+
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: my-project
+  namespace: argocd
+spec:
+  description: My Project
+  sourceRepos:
+    - '*'
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  namespaceResourceBlacklist:
+    - group: ''
+      kind: ResourceQuota
+  roles:
+    - name: project-admin
+      description: Project Admin
+      policies:
+        - p, proj:my-project:project-admin, applications, *, my-project/*, allow`,
+        },
+        argocd_rbac: {
+          embeddings: [],
+          questions: [
+            "How to configure RBAC in ArgoCD?",
+            "ArgoCD role-based access control",
+            "ArgoCD user permissions",
+          ],
+          response: `ArgoCD RBAC Configuration:
+
+1. ConfigMap Configuration:
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+data:
+  policy.csv: |
+    p, role:org-admin, applications, *, */*, allow
+    p, role:org-admin, clusters, get, *, allow
+    p, role:developer, applications, get, */*, allow
+    p, role:developer, applications, sync, */*, allow
+
+2. User Assignment:
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+data:
+  accounts.developer: apiKey,login
+  accounts.org-admin: apiKey,login`,
+        },
+      };
+
+      // Initialize knowledge base from localStorage or default
+      let knowledgeBase = loadKnowledgeBase();
+      let model;
+      async function initializeModelIfNeeded() {
+        if (!model) {
+          model = await initializeModel();
+        }
+      }
+
+      function calculateSimilarity(embedding1, embedding2) {
+        const cosineSim = cosineSimilarity(embedding1, embedding2);
+        const euclideanDist = euclideanDistance(embedding1, embedding2);
+        const manhattanDist = manhattanDistance(embedding1, embedding2);
+
+        // Normalize distances if needed, e.g., by dividing by max possible value
+        return (
+          0.5 * cosineSim +
+          0.3 * (1 / (1 + euclideanDist)) +
+          0.2 * (1 / (1 + manhattanDist))
+        );
+      }
+
+      async function askQuestion() {
+        const questionInput = document.getElementById("question");
+        const answerDiv = document.getElementById("answer");
+        const learningPrompt = document.getElementById("learningPrompt");
+
+        const question = questionInput.value.trim();
+
+        // Input validation
+        if (!question) {
+          showStatus("Please enter a question", "error");
+          return;
+        }
+
+        try {
+          await initializeModelIfNeeded();
+
+          // Show loading state
+          answerDiv.innerHTML = `
+                    <div class="status">
+                        <span class="loading"></span> Searching for answer...
+                    </div>`;
+          answerDiv.style.display = "block";
+          learningPrompt.style.display = "none";
+
+          // Ensure model is initialized
+          if (!model) {
+            model = await initializeModel();
+          }
+
+          // Find best response using the model
+          const result = await findBestResponse(question);
+
+          if (result.answer && result.confidence > 0.6) {
+            // Display answer with confidence information
+            answerDiv.innerHTML = `
+                        <div class="status success">
+                            <strong>Confidence: ${(
+                              result.confidence * 100
+                            ).toFixed(1)}%</strong>
+                            <br>
+                            <small>Matched question: "${
+                              result.matchedQuestion
+                            }"</small>
+                            <small>Topic: ${result.topic
+                              .replace(/_/g, " ")
+                              .toUpperCase()}</small>
+                        </div>
+                        <pre>${result.answer}</pre>
+                    `;
+            answerDiv.style.display = "block";
+            learningPrompt.style.display = "none";
+          } else {
+            // Show learning prompt if no good match found
+            answerDiv.style.display = "none";
+            learningPrompt.style.display = "block";
+            // Store current question for learning
+            window.currentQuestion = question;
+          }
+        } catch (error) {
+          console.error("Error processing question:", error);
+          showStatus("Error processing question", "error");
+          answerDiv.style.display = "none";
+        }
+      }
+
+      // Load knowledge base from localStorage
+      function loadKnowledgeBase() {
+        const stored = localStorage.getItem("k8sKnowledgeBase");
+        return stored ? JSON.parse(stored) : defaultKnowledgeBase;
+      }
+
+      // Save knowledge base to localStorage
+      function saveKnowledgeBase() {
+        localStorage.setItem("k8sKnowledgeBase", JSON.stringify(knowledgeBase));
+        showStatus("Knowledge base saved successfully", "success");
+      }
+
+      // Export knowledge base to file
+      function exportKnowledge() {
+        const data = JSON.stringify(knowledgeBase, null, 2);
+        const blob = new Blob([data], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "k8s_argocd_knowledge_base.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showStatus("Knowledge base exported successfully", "success");
+      }
+
+      // Clear knowledge base
+      function clearKnowledge() {
+        if (
+          confirm(
+            "Are you sure you want to clear the knowledge base? This will reset to default knowledge."
+          )
+        ) {
+          knowledgeBase = { ...defaultKnowledgeBase };
+          saveKnowledgeBase();
+          showStatus("Knowledge base reset to defaults", "success");
+        }
+      }
+
+      // Show status message
+      function showStatus(message, type) {
+        const status = document.getElementById("status");
+        status.className = `status ${type}`;
+        status.textContent = message;
+        status.style.display = "block";
+        setTimeout(() => {
+          status.style.display = "none";
+        }, 3000);
+      }
+
+      // Update learning function to persist knowledge
+      async function learnNewAnswer() {
+        const teachingAnswer = document.getElementById("teachingAnswer").value;
+        if (!teachingAnswer) {
+          showStatus("Please provide an answer to teach me", "error");
+          return;
+        }
+
+        const embedding = await generateEmbedding(currentQuestion);
+        const newTopic = `topic_${Object.keys(knowledgeBase).length + 1}`;
+
+        knowledgeBase[newTopic] = {
+          embeddings: [embedding],
+          questions: [currentQuestion],
+          response: teachingAnswer,
+        };
+
+        saveKnowledgeBase();
+
+        document.getElementById("teachingAnswer").value = "";
+        document.getElementById("learningPrompt").style.display = "none";
+
+        const answerDiv = document.getElementById("answer");
+        answerDiv.innerHTML = `
+                <div style="color: #4CAF50;">Thank you for teaching me! I've learned and saved the new answer.</div>
+                <pre>${teachingAnswer}</pre>
+            `;
+        answerDiv.style.display = "block";
+      }
+
+      // Update knowledge base browser
+      function updateKnowledgeBrowser() {
+        const knowledgeList = document.getElementById("knowledgeList");
+        knowledgeList.innerHTML = "";
+
+        Object.entries(knowledgeBase).forEach(([topic, data]) => {
+          const item = document.createElement("div");
+          item.className = "knowledge-item";
+          item.innerHTML = `
+                    <strong>${topic.replace(/_/g, " ").toUpperCase()}</strong>
+                    <br>
+                    <small>Example questions: ${data.questions[0]}</small>
+                `;
+          item.onclick = () => {
+            const answerDiv = document.getElementById("answer");
+            answerDiv.innerHTML = `
+                        <h3>${topic.replace(/_/g, " ").toUpperCase()}</h3>
+                        <pre>${data.response}</pre>
+                    `;
+            answerDiv.style.display = "block";
+          };
+          knowledgeList.appendChild(item);
+        });
+      }
+
+      // Call on page load
+      updateKnowledgeBrowser();
+
+      // Override addKnowledge to update browser
+      async function addKnowledge() {
+        const newQuestion = document.getElementById("newQuestion").value;
+        const newAnswer = document.getElementById("newAnswer").value;
+
+        if (!newQuestion || !newAnswer) {
+          showStatus("Please provide both question and answer", "error");
+          return;
+        }
+
+        const embedding = await generateEmbedding(newQuestion);
+        const newTopic = `topic_${Object.keys(knowledgeBase).length + 1}`;
+
+        knowledgeBase[newTopic] = {
+          embeddings: [embedding],
+          questions: [newQuestion],
+          response: newAnswer,
+        };
+
+        saveKnowledgeBase();
+        updateKnowledgeBrowser();
+
+        document.getElementById("newQuestion").value = "";
+        document.getElementById("newAnswer").value = "";
+
+        showStatus("New knowledge added successfully!", "success");
+      }
+
+      // Advanced NLP Model Configuration
+      const MODEL_CONFIG = {
+        vocabSize: 5000,
+        embeddingDim: 128,
+        rnnUnits: 64,
+        denseUnits: 32,
+        maxLength: 100,
+      };
+
+      // Text preprocessing with better tokenization
+      function preprocessText(text) {
+        return text
+          .toLowerCase()
+          .replace(/[^\w\s]/g, " ")
+          .split(/\s+/)
+          .filter((word) => word.length > 0)
+          .slice(0, MODEL_CONFIG.maxLength);
+      }
+
+      // Initialize TensorFlow model with more advanced architecture
+      async function initializeModel() {
+        model = tf.sequential();
+
+        // Embedding layer
+        model.add(
+          tf.layers.embedding({
+            inputDim: MODEL_CONFIG.vocabSize,
+            outputDim: MODEL_CONFIG.embeddingDim,
+            inputLength: MODEL_CONFIG.maxLength,
+          })
+        );
+
+        // Bidirectional LSTM for sequence processing
+        model.add(
+          tf.layers.bidirectional({
+            layer: tf.layers.lstm({
+              units: MODEL_CONFIG.rnnUnits,
+              returnSequences: true,
+            }),
+          })
+        );
+
+        // Global attention mechanism
+        model.add(tf.layers.globalAveragePooling1d());
+
+        // Dense layers for feature extraction
+        model.add(
+          tf.layers.dense({
+            units: MODEL_CONFIG.denseUnits,
+            activation: "relu",
+          })
+        );
+
+        model.add(tf.layers.dropout({ rate: 0.2 }));
+
+        model.add(
+          tf.layers.dense({
+            units: MODEL_CONFIG.embeddingDim,
+            activation: "tanh",
+          })
+        );
+
+        await model.compile({
+          optimizer: tf.train.adam(0.001),
+          loss: "cosineProximity",
+        });
+
+        return model;
+      }
+
+      // Generate embeddings with attention weights
+      async function generateEmbedding(text) {
+        const tokens = preprocessText(text);
+        const sequence = new Array(MODEL_CONFIG.maxLength).fill(0);
+
+        // Create word index mapping
+        tokens.forEach((token, i) => {
+          sequence[i] = hashString(token) % MODEL_CONFIG.vocabSize;
+        });
+
+        const tensorData = tf.tensor2d([sequence]);
+        const embedding = model.predict(tensorData);
+        const result = await embedding.array();
+
+        tensorData.dispose();
+        embedding.dispose();
+
+        return result[0];
+      }
+
+      // Hash function for word indexing
+      function hashString(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          const char = str.charCodeAt(i);
+          hash = (hash << 5) - hash + char;
+          hash = hash & hash;
+        }
+        return Math.abs(hash);
+      }
+
+      // Enhanced similarity calculation with multiple metrics
+      function calculateSimilarity(embedding1, embedding2) {
+        const cosineSim = cosineSimilarity(embedding1, embedding2);
+        const euclideanDist = euclideanDistance(embedding1, embedding2);
+        const manhattanDist = manhattanDistance(embedding1, embedding2);
+
+        // Weighted combination of metrics
+        return (
+          0.5 * cosineSim +
+          0.3 * (1 / (1 + euclideanDist)) +
+          0.2 * (1 / (1 + manhattanDist))
+        );
+      }
+
+      // Cosine similarity implementation
+      function cosineSimilarity(embedding1, embedding2) {
+        const dotProduct = tf.tensor1d(embedding1).dot(tf.tensor1d(embedding2));
+        const norm1 = tf.tensor1d(embedding1).norm();
+        const norm2 = tf.tensor1d(embedding2).norm();
+
+        const result = dotProduct.div(norm1.mul(norm2));
+        const value = result.dataSync()[0];
+
+        tf.dispose([dotProduct, norm1, norm2, result]);
+
+        return value;
+      }
+
+      // Euclidean distance
+      function euclideanDistance(embedding1, embedding2) {
+        return Math.sqrt(
+          embedding1.reduce(
+            (sum, val, i) => sum + Math.pow(val - embedding2[i], 2),
+            0
+          )
+        );
+      }
+
+      // Manhattan distance
+      function manhattanDistance(embedding1, embedding2) {
+        return embedding1.reduce(
+          (sum, val, i) => sum + Math.abs(val - embedding2[i]),
+          0
+        );
+      }
+
+      // Find best response with confidence scoring
+      async function findBestResponse(question) {
+        const questionEmbedding = await generateEmbedding(question);
+        const candidates = [];
+
+        // Generate candidates with multiple similarity metrics
+        for (const [topic, data] of Object.entries(knowledgeBase)) {
+          for (let i = 0; i < data.questions.length; i++) {
+            const existingEmbedding =
+              data.embeddings[i] ||
+              (await generateEmbedding(data.questions[i]));
+
+            if (!data.embeddings[i]) {
+              data.embeddings[i] = existingEmbedding;
+            }
+
+            const similarity = calculateSimilarity(
+              questionEmbedding,
+              existingEmbedding
+            );
+
+            candidates.push({
+              topic,
+              similarity,
+              response: data.response,
+              question: data.questions[i],
+            });
+          }
+        }
+
+        // Sort and filter candidates
+        candidates.sort((a, b) => b.similarity - a.similarity);
+
+        // Return top result if confidence is high enough
+        const bestMatch = candidates[0];
+        const secondBest = candidates[1] || { similarity: 0 };
+
+        // Calculate confidence based on gap between top matches
+        const confidenceGap = bestMatch.similarity - secondBest.similarity;
+        const confidence = bestMatch.similarity * (1 + confidenceGap);
+
+        return {
+          answer: confidence > 0.6 ? bestMatch.response : null,
+          confidence: confidence,
+          topic: bestMatch.topic,
+          matchedQuestion: bestMatch.question,
+        };
+      }
+    </script>
+  </body>
+</html>

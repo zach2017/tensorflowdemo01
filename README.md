@@ -37,6 +37,29 @@ TensorFlow can be described in college-level terms as follows:
 8. **Deployment**:
    - TensorFlow models can be deployed in various environments, from serving with TensorFlow Serving for production use, to mobile or edge devices with TensorFlow Lite, to web browsers with TensorFlow.js.
 
+### **Machine Learning Concepts:**
+
+1. **Embeddings**:
+   - **Explanation**: In this context, embeddings are used to transform text into a numerical representation where similar questions (semantically) are closer in vector space. The `generateEmbedding` function creates these vectors for each question.
+   - **Usage**: Each question in the knowledge base has an associated embedding, which helps in finding similar questions when a new query is made.
+
+2. **Neural Networks (specifically RNNs and LSTMs)**:
+   - **Explanation**: Recurrent Neural Networks (RNNs), particularly Long Short-Term Memory (LSTM) networks, are used for processing sequences of data, like text. The model uses a bidirectional LSTM to capture context from both directions of the input sequence.
+   - **Usage**: The model architecture includes an LSTM layer to understand the sequence of words in the questions, which is crucial for semantic understanding.
+
+3. **Attention Mechanism**:
+   - **Explanation**: An attention mechanism allows the model to weigh different parts of the input sequence differently when making predictions, effectively focusing on relevant parts of the text.
+   - **Usage**: Global average pooling is used post-LSTM, which can be considered a form of attention where all parts of the sequence are considered equally important but averaged.
+
+4. **Similarity Metrics (Cosine Similarity, Euclidean Distance, Manhattan Distance)**:
+   - **Explanation**: These metrics measure how similar two vectors (in this case, question embeddings) are. Cosine similarity is good for direction, while distances are good for magnitude differences.
+   - **Usage**: The `calculateSimilarity` function combines these metrics to determine how similar a new question is to existing ones in the knowledge base.
+
+5. **Confidence Scoring**:
+   - **Explanation**: Confidence scoring here is about evaluating how certain the model is about its prediction. It's calculated based on the similarity between the query and the best match, adjusted by how much it stands out from the second best match.
+   - **Usage**: Used to decide whether to display an answer or prompt for teaching when confidence is low.
+
+
 ### Practical Applications:
 
 - **Image Recognition**: Using CNNs (Convolutional Neural Networks) to classify or detect objects in images.
